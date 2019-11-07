@@ -1,5 +1,5 @@
 // var socket = io.connect("http://localhost:3000");
-var socket = io.connect(location.host)
+var socket = io.connect(location.host);
 
 var answersFrom = {},
   offer;
@@ -32,27 +32,24 @@ var pc = new peerConnection({
 });
 
 pc.onaddstream = function(obj) {
-  console.log("vao day", obj.stream);
-  //   var vid = document.createElement("video");
-  //   vid.setAttribute("class", "video-small");
-  //   vid.setAttribute("autoplay", "autoplay");
-  //   vid.setAttribute("id", "video-small");
-  //   document.getElementById("users-container").appendChild(vid);
-  var vid = document.querySelector("#remote-video");
-  var miniVid = document.querySelector("#mini-video");
-  miniVid.style.opacity = 1;
-  miniVid.style.zIndex = 200;
-  miniVid.setAttribute("autoplay", "autoplay");
-  miniVid.srcObject = obj.stream;
-
-  vid.style.opacity = 1;
+  console.log("vao day", obj);
+  var oldRemoteVideo = document.getElementById("remote-video");
+  if (oldRemoteVideo) {
+    oldRemoteVideo.remove();
+  }
+  var vid = document.createElement("video");
+  vid.setAttribute("class", "active");
+  vid.setAttribute("autoplay", "autoplay");
+  vid.setAttribute("id", "remote-video");
+  document.getElementById("videos").appendChild(vid);
   vid.srcObject = obj.stream;
 };
 
 navigator.getUserMedia(
   { video: true, audio: true },
   function(stream) {
-    var video = document.querySelector("#local-video");
+    var video = document.querySelector("#mini-video");
+    video.setAttribute("class", "active");
     video.srcObject = stream;
     pc.addStream(stream);
   },
@@ -67,8 +64,8 @@ socket.on("add-users", function(data) {
 });
 
 socket.on("remove-user", function(id) {
-//   var div = document.getElementById(id);
-//   document.getElementById("users").removeChild(div);
+  //   var div = document.getElementById(id);
+  //   document.getElementById("users").removeChild(div);
 });
 
 socket.on("offer-made", function(data) {
@@ -98,7 +95,7 @@ socket.on("answer-made", function(data) {
   pc.setRemoteDescription(
     new sessionDescription(data.answer),
     function() {
-    //   document.getElementById(data.socket).setAttribute("class", "active");
+      //   document.getElementById(data.socket).setAttribute("class", "active");
       if (!answersFrom[data.socket]) {
         createOffer(data.socket);
         answersFrom[data.socket] = true;
