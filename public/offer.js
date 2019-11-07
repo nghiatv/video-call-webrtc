@@ -116,10 +116,10 @@ window.onload = function(e) {
       new sessionDescription(data.answer),
       function() {
         //   document.getElementById(data.socket).setAttribute("class", "active");
-        // if (!answersFrom[data.socket]) {
-        //   createOffer(data.socket);
-        //   answersFrom[data.socket] = true;
-        // }
+        if (!answersFrom[data.socket]) {
+          createOffer(data.socket);
+          answersFrom[data.socket] = true;
+        }
         icons.setAttribute("class", "active");
         hangup.setAttribute("class", "active");
       },
