@@ -12,10 +12,28 @@
         <video id="mini-video" autoplay playsinline muted></video>
         <video id="remote-video" autoplay playsinline></video>
       </div>
+      <div id="make-a-call-div" class="hidden">
+        <div>Make a call<span id="make-a-call-room-span"></span>?</div>
+        <button id="make-a-call-button">CALL</button>
+      </div>
+
+      <footer>
+        <div id="waiting-div">
+          <div id="room-link">
+            Waiting for connection...
+          </div>
+        </div>
+        <div id="status-div"></div>
+        <div id="rejoin-div" class="hidden">
+          <span>You have left the call.</span>
+          <button id="rejoin-button">REJOIN</button
+          ><button id="new-room-button">NEW ROOM</button>
+        </div>
+      </footer>
 
       <div id="icons" class="hidden">
         <svg
-          id="mute-audio"
+          id="mute-audio" 
           xmlns="http://www.w3.org/2000/svg"
           width="48"
           height="48"
@@ -108,6 +126,6 @@
     </div>
 
     <script src="/socket.js"></script>
-    <script type="text/javascript" src="/index.js"></script>
+    <script type="text/javascript" src="/offer.js"></script>
   </body>
 </html>
