@@ -38,7 +38,7 @@ export class ChatServer {
 
     this.io.on("connection", socket => {
       this.socketsArray.push(socket.id);
-      console.log("socket ", this.socketsArray);
+      console.log("On connection ", this.socketsArray);
       socket.broadcast.emit("add-users", {
         users: [socket.id]
       });
@@ -48,6 +48,7 @@ export class ChatServer {
         if (this.socketsArray.length < 2) {
           this.oldOffer = {};
         }
+        console.log("on DISCONNECT ", this.socketsArray);
         this.io.emit("remove-user", socket.id);
       });
 
