@@ -38,6 +38,7 @@ export class ChatServer {
 
     this.io.on("connection", socket => {
       this.socketsArray.push(socket.id);
+      console.log("socket ", this.socketsArray);
       socket.broadcast.emit("add-users", {
         users: [socket.id]
       });
