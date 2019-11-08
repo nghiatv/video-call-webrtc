@@ -38,7 +38,6 @@ export class ChatServer {
 
     this.io.on("connection", socket => {
       this.socketsArray.push(socket.id);
-      console.log("connection again", this.socketsArray);
       socket.broadcast.emit("add-users", {
         users: [socket.id]
       });
@@ -79,6 +78,9 @@ export class ChatServer {
       socket.on("make-answer", data => {
         // Webapp always awnser this offer
         console.log("make offer socket id", data.to);
+        // remove oldOffer
+
+        this.oldOffer = {};
         var answer = {
           socket: socket.id, // socket cua webapp
           answer: data.answer // anwser cua web app
