@@ -299,6 +299,7 @@ p {
   bottom: 77px;
   left: 6vw;
   position: absolute;
+  z-index: 3;
 }
 
 circle {

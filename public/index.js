@@ -67,7 +67,7 @@ window.onload = function(e) {
   });
 
   socket.on("list-pc", data => {
-    console.log("uuu", data);
+    // console.log("uuu", data);
     if (data.socket) {
       pc.setRemoteDescription(
         new sessionDescription(data.offer),

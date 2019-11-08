@@ -2,7 +2,7 @@
 window.onload = function(e) {
   var socket = io.connect(location.host);
 
-  var answersFrom = {},
+  var answersFrom = [],
     offer;
   var peerConnection =
     window.RTCPeerConnection ||
@@ -32,6 +32,8 @@ window.onload = function(e) {
     ]
   });
 
+  var localStream = null;
+
   var makeACall = document.querySelector("#make-a-call-div");
   var waitingDiv = document.querySelector("#waiting-div");
   var icons = document.querySelector("#icons");
@@ -47,17 +49,23 @@ window.onload = function(e) {
     vid.setAttribute("id", "remote-video");
     document.getElementById("videos").appendChild(vid);
     vid.srcObject = obj.stream;
-    console.log("vid", vid, obj.stream);
+    // console.log("vid", vid, obj.stream);
+  };
+
+  pc.onconnectionstatechange = event => {
+    console.log("connection change", event.currentTarget.connectionState);
   };
 
   navigator.getUserMedia(
     { video: true, audio: true },
     function(stream) {
+      // asgn to localStream
+
+      localStream = stream;
       var video = document.querySelector("#mini-video");
       video.setAttribute("class", "active");
       video.srcObject = stream;
       if (pc) {
-        console.log("Added stream", stream);
         pc.addStream(stream);
       }
     },
@@ -70,11 +78,13 @@ window.onload = function(e) {
 
   socket.on("room-full", () => {
     console.log("Room is full");
+    pc.close();
   });
 
   socket.on("room-available", id => {
     makeACall.setAttribute("class", "active");
     makeACall.addEventListener("click", () => {
+      // console.log("connectionState",pc.connectionState)
       createOffer(id); // chinh la socket id cua minh
     });
   });
@@ -85,33 +95,11 @@ window.onload = function(e) {
     if (oldRemoteVideo) oldRemoteVideo.remove();
 
     // remove
-    // sharingDiv.setAttribute("class", "active");
+    resetState();
   });
 
-  // socket.on("offer-made", function(data) {
-  //   offer = data.offer;
-  //   pc.setRemoteDescription(
-  //     new sessionDescription(data.offer),
-  //     function() {
-  //       pc.createAnswer(function(answer) {
-  //         pc.setLocalDescription(
-  //           new sessionDescription(answer),
-  //           function() {
-  //             socket.emit("make-answer", {
-  //               answer: answer,
-  //               to: data.socket
-  //             });
-  //           },
-  //           error
-  //         );
-  //       }, error);
-  //     },
-  //     error
-  //   );
-  // });
-
   socket.on("answer-made", function(data) {
-    console.log("answer-made", data);
+    // console.log("answer-made", data, pc.currentLocalDescription);
     pc.setRemoteDescription(
       new sessionDescription(data.answer),
       function() {
@@ -122,6 +110,7 @@ window.onload = function(e) {
         }
         icons.setAttribute("class", "active");
         hangup.setAttribute("class", "active");
+        hangup.addEventListener("click", hangupFnc);
       },
       error
     );
@@ -131,7 +120,7 @@ window.onload = function(e) {
     //
     makeACall.setAttribute("class", "hidden"); //
     pc.createOffer(function(offer) {
-      console.log("offer", offer);
+      // console.log("offer", offer);
       pc.setLocalDescription(
         new sessionDescription(offer),
         function() {
@@ -149,4 +138,82 @@ window.onload = function(e) {
   function error(err) {
     console.warn("Error", err);
   }
+  // hangup
+  var hangupFnc = () => {
+    if (localStream) {
+      if (typeof localStream.getTracks === "undefined") {
+        localStream.stop();
+      } else {
+        localStream.getTracks().forEach(function(track) {
+          track.stop();
+        });
+      }
+      localStream = null;
+    }
+    if (pc) {
+      pc.close();
+      pc = null;
+    }
+    socket.disconnect();
+    // trick
+
+    window.location.reload();
+  };
+
+  var toggleVideoMute = () => {
+    var videoTracks = localStream.getVideoTracks();
+    if (videoTracks.length === 0) {
+      console.log("No local video available.");
+      return;
+    }
+
+    console.log("Toggling video mute state.");
+    for (var i = 0; i < videoTracks.length; ++i) {
+      videoTracks[i].enabled = !videoTracks[i].enabled;
+    }
+    console.log("Video " + (videoTracks[0].enabled ? "unmuted." : "muted."));
+    if (muteVideo) {
+      muteVideo.setAttribute("class", videoTracks[0].enabled ? "off" : "on");
+    }
+  };
+
+  var toggleAudioMute = () => {
+    var audioTracks = localStream.getAudioTracks();
+    if (audioTracks.length === 0) {
+      console.log("No local audio available.");
+      return;
+    }
+
+    console.log("Toggling audio mute state.");
+    for (var i = 0; i < audioTracks.length; ++i) {
+      audioTracks[i].enabled = !audioTracks[i].enabled;
+    }
+    console.log("Audio " + (audioTracks[0].enabled ? "unmuted." : "muted."));
+    if (muteAudio) {
+      muteAudio.setAttribute("class", audioTracks[0].enabled ? "off" : "on");
+    }
+  };
+
+  var toggleFullscreen = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      document.documentElement.requestFullscreen();
+    }
+  };
+
+  function resetState() {
+    makeACall.setAttribute("class", "active");
+    waitingDiv.setAttribute("class", "hidden");
+    icons.setAttribute("class", "hidden");
+    hangup.setAttribute("class", "hidden");
+  }
+
+  var fullscreen = document.querySelector("#fullscreen");
+  var muteVideo = document.querySelector("#mute-video");
+  var muteAudio = document.querySelector("#mute-audio");
+
+  fullscreen.addEventListener("click", toggleFullscreen);
+  muteAudio.addEventListener("click", toggleAudioMute);
+  muteVideo.addEventListener("click", toggleVideoMute);
 };
