@@ -25,9 +25,10 @@ window.onload = function(e) {
   var pc = new peerConnection({
     iceServers: [
       {
-        url: "stun:stun.services.mozilla.com",
-        username: "somename",
-        credential: "somecredentials"
+        // url: "stun:stun.services.mozilla.com",
+        url: "stun:stun.l.google.com:19302"
+        // username: "somename",
+        // credential: "somecredentials"
       }
     ]
   });
@@ -38,6 +39,16 @@ window.onload = function(e) {
   var waitingDiv = document.querySelector("#waiting-div");
   var icons = document.querySelector("#icons");
   var hangup = document.querySelector("#hangup");
+  const filterIceCandidate = candidateObj => {
+    var candidateStr = candidateObj.candidate;
+
+    // Always eat TCP candidates. Not needed in this context.
+    if (candidateStr.indexOf("tcp") !== -1) {
+      return false;
+    }
+
+    return true;
+  };
   pc.onaddstream = function(obj) {
     var oldRemoteVideo = document.getElementById("remote-video");
     if (oldRemoteVideo) {
@@ -53,7 +64,23 @@ window.onload = function(e) {
   };
 
   pc.onconnectionstatechange = event => {
-    console.log("connection change", event.currentTarget.connectionState);
+    console.log("connection change", pc.iceConnectionState);
+  };
+
+  pc.onicecandidate = ev => {
+    // console.log("sss", pc.iceConnectionState);
+    if (ev.candidate) {
+      // Send the candidate to the remote peer
+      if (filterIceCandidate(ev.candidate)) {
+        var message = {
+          room: "phet",
+          candidate: ev.candidate
+        };
+        socket.emit("make-candidate", message);
+      }
+    } else {
+      // All ICE candidates have been sent
+    }
   };
 
   navigator.getUserMedia(
@@ -73,19 +100,19 @@ window.onload = function(e) {
   );
 
   socket.on("connect", () => {
-    socket.emit("get-users");
+    socket.emit("room", "phet");
   });
 
-  socket.on("room-full", () => {
+  socket.on("full", () => {
     console.log("Room is full");
     pc.close();
   });
 
-  socket.on("room-available", id => {
+  socket.on("joined", room => {
     makeACall.setAttribute("class", "active");
     makeACall.addEventListener("click", () => {
       // console.log("connectionState",pc.connectionState)
-      createOffer(id); // chinh la socket id cua minh
+      createOffer(room); // chinh la socket id cua minh
     });
   });
 
@@ -98,16 +125,16 @@ window.onload = function(e) {
     resetState();
   });
 
-  socket.on("answer-made", function(data) {
+  socket.on("answer-made", data => {
     // console.log("answer-made", data, pc.currentLocalDescription);
     pc.setRemoteDescription(
       new sessionDescription(data.answer),
       function() {
         //   document.getElementById(data.socket).setAttribute("class", "active");
-        if (!answersFrom[data.socket]) {
-          createOffer(data.socket);
-          answersFrom[data.socket] = true;
-        }
+        // if (!answersFrom[data.room]) {
+        //   createOffer(data.room);
+        //   answersFrom[data.room] = true;
+        // }
         icons.setAttribute("class", "active");
         hangup.setAttribute("class", "active");
         hangup.addEventListener("click", hangupFnc);
@@ -116,18 +143,39 @@ window.onload = function(e) {
     );
   });
 
-  function createOffer(id) {
+  socket.on("candidate", async message => {
+    try {
+      const candidate = new RTCIceCandidate(message.candidate);
+      // const candidate = new RTCIceCandidate(message.candidate);
+      await pc.addIceCandidate(candidate);
+      console.log("Remote candidate added successfully.");
+    } catch (error) {
+      console.log("Remote candidate added failed.", error);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    try {
+      socket.emit("leave", "phet");
+    } catch (error) {
+      console.log("leave error: ", error);
+    }
+  });
+
+  function createOffer(room) {
     //
     makeACall.setAttribute("class", "hidden"); //
-    pc.createOffer(function(offer) {
+    pc.createOffer(offer => {
       // console.log("offer", offer);
+      const data = {
+        offer: offer,
+        room: room
+      };
       pc.setLocalDescription(
         new sessionDescription(offer),
         function() {
-          socket.emit("make-offer", {
-            offer: offer,
-            to: id
-          });
+          socket.emit("make-offer", data);
+          // console.log("Data", data);
           waitingDiv.setAttribute("class", "active");
         },
         error

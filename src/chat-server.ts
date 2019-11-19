@@ -1,7 +1,22 @@
 import * as express from "express";
 import { createServer, Server } from "http";
 import * as socketIo from "socket.io"; // new
+const cors = require("cors");
+import {
+  RESPONSE_CONNECT,
+  RESPONSE_DISCONNECT,
+  RESPONSE_UNKNOWN_ROOM
+} from "./constants";
+require("dotenv").config();
 
+interface IOffer {
+  offer: any;
+  room: string;
+}
+interface IAnswer {
+  answer: any;
+  room: string;
+}
 export class ChatServer {
   public static readonly PORT: number = 3000;
   private app: express.Application;
@@ -25,6 +40,8 @@ export class ChatServer {
   private createApp(): void {
     this.app = express();
     this.app.use(express.static("public"));
+    this.app.use(cors());
+    this.app.options("*", cors());
   }
 
   private config(): void {
@@ -36,58 +53,68 @@ export class ChatServer {
       console.log("Running server on port %s", this.port);
     });
 
-    this.io.on("connection", socket => {
-      this.socketsArray.push(socket.id);
-      console.log("On connection ", this.socketsArray);
-      socket.broadcast.emit("add-users", {
-        users: [socket.id]
+    this.io.on("connection", (socket: socketIo.Socket) => {
+      console.log(`${RESPONSE_CONNECT}: ${socket.id}`);
+      let currentRoom;
+      // socket.broadcast.emit("add-users", {
+      //   users: [socket.id]
+      // });
+
+      // Create or join Room
+      socket.on("room", (room: string) => {
+        const myRoom = this.io.sockets.adapter.rooms[room] || { length: 0 };
+        const numClients = myRoom.length;
+        if (numClients === 0) {
+          socket.join(room).emit("joined", room);
+          currentRoom = room;
+          console.log("Created room:", room);
+        } else if (numClients === 1) {
+          socket
+            .join(room, () => {
+              let rooms = Object.keys(socket.rooms);
+              console.log("rooms: ", rooms);
+              socket.broadcast.to(room).emit("another-joined"); // broadcast to everyone in the room
+            })
+            .emit("joined", room);
+          currentRoom = room;
+        } else {
+          socket.emit("full", room);
+        }
+      });
+
+      socket.on("leave", (room: string) => {
+        const rooms = Object.keys(this.io.sockets.adapter.rooms);
+        const hasRoom = rooms.find((roomName: string) => roomName === room);
+        if (hasRoom) {
+          socket.leave(room, () => {
+            this.io.to(room).emit("remove-user");
+          });
+        } else {
+          socket.emit("leaveError", { error: RESPONSE_UNKNOWN_ROOM });
+        }
+      });
+
+      // handle candidate
+      socket.on("make-candidate", (message: any) => {
+        socket.broadcast.to(message.room).emit("candidate", message);
       });
 
       socket.on("disconnect", () => {
-        this.socketsArray.splice(this.socketsArray.indexOf(socket.id), 1);
-        if (this.socketsArray.length < 2) {
-          this.oldOffer = {};
-        }
-        console.log("on DISCONNECT ", this.socketsArray);
-        this.io.emit("remove-user", socket.id);
+        console.log(`${RESPONSE_DISCONNECT}`);
+        socket.broadcast.to(currentRoom).emit("leave", socket.id);
+        // this.io.emit("remove-user", socket.id);
       });
 
-      socket.on("get-users", () => {
-        if (this.socketsArray.length > 2) {
-          // if room full
-          socket.emit("room-full");
-        } else {
-          socket.emit("room-available", socket.id);
-        }
-      });
-
-      socket.on("get-available-pc", () => {
-        socket.emit("list-pc", this.oldOffer);
-      });
-
-      socket.on("make-offer", data => {
+      socket.on("make-offer", (data: IOffer) => {
         // RN will send offer
-        var offer = {
-          offer: data.offer, // offer doc tao ra voi pc.createOffer
-          socket: socket.id // socketId cua thang make offer
-        };
-        this.oldOffer = offer; // add peekConnection in queue
-
-        var rest = this.socketsArray.find(sId => sId !== socket.id);
-        socket.to(rest).emit("offer-made", offer);
+        console.log("make offer socket id", data.room);
+        socket.broadcast.to(data.room).emit("offer-made", data);
       });
 
-      socket.on("make-answer", data => {
+      socket.on("make-answer", (data: IAnswer) => {
         // Webapp always awnser this offer
-        console.log("make offer socket id", data.to);
-        // remove oldOffer
-
-        this.oldOffer = {};
-        var answer = {
-          socket: socket.id, // socket cua webapp
-          answer: data.answer // anwser cua web app
-        };
-        socket.to(data.to).emit("answer-made", answer);
+        console.log("make answer socket id", data.room);
+        socket.broadcast.to(data.room).emit("answer-made", data);
       });
     });
   }
@@ -103,4 +130,6 @@ export class ChatServer {
   public getApp(): express.Application {
     return this.app;
   }
+
+  protected handleRoom(): void {}
 }

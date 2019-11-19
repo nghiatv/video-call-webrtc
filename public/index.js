@@ -63,10 +63,12 @@ window.onload = function(e) {
 
   socket.on("connect", () => {
     // console.log("on connect again", socket.id);
-    socket.emit("get-available-pc");
+    // socket.emit("get-available-pc");
+
+    socket.emit("room", "phet")
   });
 
-  socket.on("list-pc", data => {
+  socket.on("another-joined", data => {
     // console.log("uuu", data);
     if (data.socket) {
       pc.setRemoteDescription(
@@ -78,7 +80,7 @@ window.onload = function(e) {
               function() {
                 socket.emit("make-answer", {
                   answer: answer,
-                  to: data.socket
+                  room: data.room
                 });
               },
               error
@@ -108,7 +110,7 @@ window.onload = function(e) {
             function() {
               socket.emit("make-answer", {
                 answer: answer,
-                to: data.socket // socketId cua make Offer
+                room: data.room // socketId cua make Offer
               });
             },
             error
