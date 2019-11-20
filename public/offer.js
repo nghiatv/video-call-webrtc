@@ -109,11 +109,15 @@ window.onload = function(e) {
   });
 
   socket.on("joined", room => {
+    waitingDiv.setAttribute("class", "hidden");
     makeACall.setAttribute("class", "active");
-    makeACall.addEventListener("click", () => {
-      // console.log("connectionState",pc.connectionState)
-      createOffer(room); // chinh la socket id cua minh
-    });
+    console.log("getEventListeners(makeACall)", !makeACall.onclick);
+    if (!makeACall.onclick) {
+      makeACall.onclick = () => {
+        // console.log("connectionState",pc.connectionState)
+        createOffer(room); // chinh la socket id cua minh
+      };
+    }
   });
 
   socket.on("remove-user", function(id) {
@@ -152,6 +156,14 @@ window.onload = function(e) {
     } catch (error) {
       console.log("Remote candidate added failed.", error);
     }
+  });
+
+  socket.on("remoteLeave", socketId => {
+    var video = document.querySelector("#remote-video");
+    video.setAttribute("class", "hidden");
+    video.srcObject = null;
+    // trick. autojoin when leave
+    socket.emit("room", "phet");
   });
 
   socket.on("disconnect", () => {

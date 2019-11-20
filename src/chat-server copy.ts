@@ -22,6 +22,10 @@ export class ChatServer {
     this.listen();
   }
 
+  public getApp(): express.Application {
+    return this.app;
+  }
+
   private createApp(): void {
     this.app = express();
     this.app.use(express.static("public"));
@@ -67,13 +71,13 @@ export class ChatServer {
 
       socket.on("make-offer", data => {
         // RN will send offer
-        var offer = {
+        let offer = {
           offer: data.offer, // offer doc tao ra voi pc.createOffer
           socket: socket.id // socketId cua thang make offer
         };
         this.oldOffer = offer; // add peekConnection in queue
 
-        var rest = this.socketsArray.find(sId => sId !== socket.id);
+        let rest = this.socketsArray.find(sId => sId !== socket.id);
         socket.to(rest).emit("offer-made", offer);
       });
 
@@ -83,7 +87,7 @@ export class ChatServer {
         // remove oldOffer
 
         this.oldOffer = {};
-        var answer = {
+        let answer = {
           socket: socket.id, // socket cua webapp
           answer: data.answer // anwser cua web app
         };
@@ -98,9 +102,5 @@ export class ChatServer {
 
   private sockets(): void {
     this.io = socketIo(this.server);
-  }
-
-  public getApp(): express.Application {
-    return this.app;
   }
 }

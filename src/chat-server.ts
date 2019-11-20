@@ -2,11 +2,7 @@ import * as express from "express";
 import { createServer, Server } from "http";
 import * as socketIo from "socket.io"; // new
 const cors = require("cors");
-import {
-  RESPONSE_CONNECT,
-  RESPONSE_DISCONNECT,
-  RESPONSE_UNKNOWN_ROOM
-} from "./constants";
+import { RESPONSE_CONNECT, RESPONSE_DISCONNECT, RESPONSE_UNKNOWN_ROOM } from "./constants";
 require("dotenv").config();
 
 interface IOffer {
@@ -87,7 +83,7 @@ export class ChatServer {
         const hasRoom = rooms.find((roomName: string) => roomName === room);
         if (hasRoom) {
           socket.leave(room, () => {
-            this.io.to(room).emit("remove-user");
+            this.io.to(room).emit("remoteLeave", socket.id);
           });
         } else {
           socket.emit("leaveError", { error: RESPONSE_UNKNOWN_ROOM });
@@ -101,7 +97,7 @@ export class ChatServer {
 
       socket.on("disconnect", () => {
         console.log(`${RESPONSE_DISCONNECT}`);
-        socket.broadcast.to(currentRoom).emit("leave", socket.id);
+        socket.broadcast.to(currentRoom).emit("remoteLeave", socket.id);
         // this.io.emit("remove-user", socket.id);
       });
 
@@ -131,5 +127,7 @@ export class ChatServer {
     return this.app;
   }
 
-  protected handleRoom(): void {}
+  protected handleRoom(): void {
+    // TODO
+  }
 }

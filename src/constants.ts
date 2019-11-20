@@ -1,6 +1,6 @@
-export const REDIRECT_URL = "https://appr.tc";
+// export const REDIRECT_URL = "https://appr.tc";
 
-export const LOOPBACK_CLIENT_ID = "LOOPBACK_CLIENT_ID";
+// export const LOOPBACK_CLIENT_ID = "LOOPBACK_CLIENT_ID";
 
 export const RESPONSE_ERROR = "ERROR";
 export const RESPONSE_ROOM_FULL = "FULL";
