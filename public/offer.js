@@ -25,10 +25,7 @@ window.onload = function(e) {
   var pc = new peerConnection({
     iceServers: [
       {
-        // url: "stun:stun.services.mozilla.com",
         url: "stun:stun.l.google.com:19302"
-        // username: "somename",
-        // credential: "somecredentials"
       }
     ]
   });

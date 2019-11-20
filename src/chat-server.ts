@@ -13,17 +13,24 @@ interface IAnswer {
   answer: any;
   room: string;
 }
+
+interface IIceMessage {
+  room: string;
+  candidate: RTCIceCandidate | null;
+  isCaller: boolean;
+}
 export class ChatServer {
   public static readonly PORT: number = 3000;
   private app: express.Application;
   private port: string | number;
   private server: Server;
   private io: SocketIO.Server;
-  private socketsArray: string[] = [];
-  private oldOffer: {
-    socket?: string;
+  private sdp: {
     offer?: any;
-  } = {};
+    answer?: any;
+  }[] = [];
+  private callerCandidate: RTCIceCandidateInit[] | RTCIceCandidate[] | null = null;
+  private calleeCandidate: RTCIceCandidateInit[] | RTCIceCandidate[] | null = null;
 
   constructor() {
     this.createApp();
@@ -91,7 +98,12 @@ export class ChatServer {
       });
 
       // handle candidate
-      socket.on("make-candidate", (message: any) => {
+      socket.on("make-candidate", (message: IIceMessage) => {
+        // if (message.isCaller) {
+        //   this.calleeCandidate[currentRoom] = message.candidate;
+        // } else {
+        //   this.calleeCandidate[currentRoom] = message.candidate;
+        // }
         socket.broadcast.to(message.room).emit("candidate", message);
       });
 
@@ -103,13 +115,15 @@ export class ChatServer {
 
       socket.on("make-offer", (data: IOffer) => {
         // RN will send offer
-        console.log("make offer socket id", data.room);
+        console.log("Make offer. Room:", data.room);
+        // this.sdp[data.room].offer = data.offer;
         socket.broadcast.to(data.room).emit("offer-made", data);
       });
 
       socket.on("make-answer", (data: IAnswer) => {
         // Webapp always awnser this offer
-        console.log("make answer socket id", data.room);
+        console.log("Make answer. Room: ", data.room);
+        // this.sdp[data.room].answer = data.answer;
         socket.broadcast.to(data.room).emit("answer-made", data);
       });
     });
